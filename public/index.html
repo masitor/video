@@ -1,0 +1,108 @@
+<!-- public/index.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sync Watch</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h2>تماشای همزمان — روم ساده</h2>
+
+  <label>Room ID: <input id="roomId" value="room1"></label>
+  <button id="joinBtn">Join Room</button>
+  <br><br>
+
+  <video id="video" width="640" controls>
+    <!-- برای تست از یک فایل mp4 محلی یا URL استفاده کن -->
+    <source src="../sample.mp4" type="video/mp4">
+    مرورگر شما ویدیو را پشتیبانی نمی‌کند.
+  </video>
+
+  <script>
+    const socket = io();
+    const video = document.getElementById('video');
+    const joinBtn = document.getElementById('joinBtn');
+    const roomIdInput = document.getElementById('roomId');
+
+    let joinedRoom = null;
+    let suppressLocalEvents = false; // برای جلوگیری از لوپ
+
+    // معمولاً وقتی کاربر join کند، وضعیت را می‌گیریم
+    joinBtn.onclick = () => {
+      const roomId = roomIdInput.value.trim();
+      if (!roomId) return alert("یک room id وارد کن");
+      joinedRoom = roomId;
+      socket.emit("join-room", { roomId, userName: "user" + Math.floor(Math.random()*1000) });
+      console.log("joined", roomId);
+      // وقتی join شد بهتره یک درخواست sync فوری بفرستی (اگر لازم)
+      socket.emit("request-sync", { roomId });
+    };
+
+    // وقتی دریافت شد که باید sync بشیم
+    socket.on("sync-state", ({ time, playing, serverTime }) => {
+      console.log("sync-state", time, playing);
+      // تنظیم زمان محلی و وضعیت پخش
+      suppressLocalEvents = true;
+      // برای اختلاف شبکه: اگر خیلی فرق داره، set currentTime
+      if (Math.abs(video.currentTime - time) > 0.5) {
+        video.currentTime = time;
+      }
+      if (playing) video.play().catch(()=>{}); else video.pause();
+      setTimeout(()=> suppressLocalEvents=false, 200);
+    });
+
+    socket.on("play", ({ time, serverTime }) => {
+      console.log("remote play", time);
+      suppressLocalEvents = true;
+      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
+      video.play().catch(()=>{});
+      setTimeout(()=> suppressLocalEvents=false, 200);
+    });
+
+    socket.on("pause", ({ time, serverTime }) => {
+      console.log("remote pause", time);
+      suppressLocalEvents = true;
+      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
+      video.pause();
+      setTimeout(()=> suppressLocalEvents=false, 200);
+    });
+
+    socket.on("seek", ({ time }) => {
+      console.log("remote seek", time);
+      suppressLocalEvents = true;
+      video.currentTime = time;
+      setTimeout(()=> suppressLocalEvents=false, 200);
+    });
+
+    // ارسال اتفاقات محلی به سرور
+    video.addEventListener('play', () => {
+      if (!joinedRoom || suppressLocalEvents) return;
+      console.log("local play emit", video.currentTime);
+      socket.emit('play', { roomId: joinedRoom, time: video.currentTime });
+    });
+
+    video.addEventListener('pause', () => {
+      if (!joinedRoom || suppressLocalEvents) return;
+      console.log("local pause emit", video.currentTime);
+      socket.emit('pause', { roomId: joinedRoom, time: video.currentTime });
+    });
+
+    video.addEventListener('seeking', () => {
+      if (!joinedRoom || suppressLocalEvents) return;
+      // وقتی کاربر seek کرد، یک event می‌فرستیم
+      console.log("local seek emit", video.currentTime);
+      socket.emit('seek', { roomId: joinedRoom, time: video.currentTime });
+    });
+
+    // گزینه: هر چند ثانیه یکبار، وضعیت را به‌صورت نرمال به‌روزرسانی کن (برای رفع drift)
+    setInterval(() => {
+      if (!joinedRoom) return;
+      // فقط وقتی در حال پخش است
+      if (!video.paused) {
+        socket.emit('heartbeat', { roomId: joinedRoom, time: video.currentTime });
+      }
+    }, 5000);
+  </script>
+</body>
+</html>
