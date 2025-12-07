@@ -1,610 +1,94 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>سینک واچ | تماشای گروهی</title>
-  <script src="/socket.io/socket.io.js"></script>
-  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/wf/vazirmatn-fd.css" rel="stylesheet" type="text/css" />
-  
-  <style>
-    /* --- Variables & Reset --- */
-    :root {
-      --primary: #8b5cf6;
-      --primary-hover: #7c3aed;
-      --secondary: #ec4899;
-      --accent: #06b6d4;
-      --bg-dark: #0f172a;
-      --glass-bg: rgba(15, 23, 42, 0.65);
-      --glass-border: rgba(255, 255, 255, 0.08);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --shadow-color: rgba(0, 0, 0, 0.25);
-      --font-family: 'Vazirmatn', sans-serif;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>سینک واچ | تماشای گروهی</title>
+<script src="/socket.io/socket.io.js"></script>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/wf/vazirmatn-fd.css" rel="stylesheet" />
+<style>
+:root{
+--primary:#8b5cf6;--primary-hover:#7c3aed;--secondary:#ec4899;--accent:#06b6d4;--bg-dark:#0f172a;
+--glass-bg:rgba(15,23,42,.65);--glass-border:rgba(255,255,255,.08);
+--text-main:#f8fafc;--text-muted:#94a3b8;--font-family:'Vazirmatn',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-family);background:var(--bg-dark);color:var(--text-main);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:1rem;overflow-x:hidden}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* FIX: Laptop video too small */
+.vid-container{width:100%;max-width:100% !important}
+video{width:100%!important;height:auto!important;max-height:85vh;object-fit:contain;display:block}
 
-    body {
-      font-family: var(--font-family);
-      background-color: var(--bg-dark);
-      /* Animated Background */
-      background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
-      background-size: 400% 400%;
-      animation: gradientBG 15s ease infinite;
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 1rem;
-      overflow-x: hidden;
-    }
+/* Chat initially hidden */
+.chat{display:none}
 
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    /* --- Layout Container --- */
-    .app-container {
-      width: 100%;
-      max-width: 1600px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2rem;
-      z-index: 10;
-      position: relative;
-    }
-
-    /* --- Floating Shapes (Background Decoration) --- */
-    .shape {
-      position: fixed;
-      filter: blur(80px);
-      z-index: -1;
-      opacity: 0.4;
-      animation: float 10s infinite ease-in-out alternate;
-    }
-    .shape-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--primary); animation-delay: 0s; }
-    .shape-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: var(--secondary); animation-delay: -5s; }
-
-    @keyframes float {
-      from { transform: translate(0, 0); }
-      to { transform: translate(30px, 50px); }
-    }
-
-    /* --- Typography --- */
-    h2 {
-      font-weight: 900;
-      font-size: clamp(1.8rem, 5vw, 3rem);
-      margin-bottom: 0.5rem;
-      background: linear-gradient(to right, var(--accent), var(--secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-align: center;
-      filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.3));
-      animation: fadeInDown 0.8s ease-out;
-    }
-
-    /* --- Join Section (بدون تغییر) --- */
-    #joinContainer {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 2rem;
-      border-radius: 24px;
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      width: 100%;
-      max-width: 400px;
-      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      animation: zoomIn 0.6s ease-out;
-    }
-
-    @media (min-width: 640px) {
-      #joinContainer {
-        flex-direction: row;
-        max-width: fit-content;
-        align-items: center;
-        padding: 1.5rem 2rem;
-      }
-    }
-
-    #joinContainer label {
-      font-weight: 500;
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-
-    #roomId {
-      width: 100%;
-      padding: 14px 20px;
-      border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(0, 0, 0, 0.3);
-      color: #fff;
-      font-size: 1.1rem;
-      font-family: 'Segoe UI', sans-serif;
-      text-align: center;
-      transition: all 0.3s ease;
-      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    @media (min-width: 640px) { #roomId { width: 220px; } }
-
-    #roomId:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
-      transform: scale(1.02);
-    }
-
-    #joinBtn {
-      width: 100%;
-      padding: 14px 24px;
-      border: none;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--primary), var(--secondary));
-      color: #fff;
-      font-weight: 800;
-      font-size: 1rem;
-      font-family: var(--font-family);
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
-    }
-
-    @media (min-width: 640px) { #joinBtn { width: auto; } }
-
-    #joinBtn:hover {
-      transform: translateY(-3px) scale(1.02);
-      box-shadow: 0 8px 25px rgba(236, 72, 153, 0.6);
-    }
-    
-    #joinBtn:active { transform: translateY(-1px); }
-
-    /* --- Main Content Layout --- */
-    .content-wrapper {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-      opacity: 0; /* JS handles fade in */
-      animation: fadeInUp 1s ease-out forwards;
-      animation-delay: 0.2s;
-      width: 100%; 
-    }
-
-    /* Desktop Layout: تغییر اندازه ویدیو برای بزرگتر شدن */
-    @media (min-width: 1024px) {
-      .content-wrapper {
-        grid-template-columns: 2fr 350px; /* ویدیو ۲/۳ و چت ۱/۳ یا ۳۵۰px */
-        align-items: start;
-        transition: grid-template-columns 0.4s ease; /* برای انیمیشن مینیمایز/ماکسیمایز */
-      }
-      
-      /* حالت مینیمایز: ویدیو تمام عرض را بگیرد */
-      .content-wrapper.chat-minimized-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* --- Video Player --- */
-    .vid-container {
-      position: relative;
-      border-radius: 24px;
-      overflow: hidden;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-      border: 1px solid var(--glass-border);
-      background: #000;
-    }
-
-    video {
-      width: 100%;
-      display: block; 
-      aspect-ratio: 16/9;
-      object-fit: contain;
-    }
-
-    /* --- Chat Section --- */
-    .chat {
-      /* به طور پیش فرض در حالت ورود، چت باکس نمایش داده نشود */
-      width: 100%;
-      height: 100%;
-      display: none; 
-    }
-
-    /* این کلاس بعد از Join اضافه می شود و چت را فعال می کند */
-    .chat.chat-active {
-        display: block;
-        animation: fadeInUp 0.6s ease 0.1s backwards;
-    }
-    
-    /* این کلاس برای حالت مینیمایز چت، آن را پنهان می کند */
-    .chat.chat-minimized-state {
-        display: none !important;
-    }
-
-    .chat-card {
-      background: var(--glass-bg);
-      backdrop-filter: blur(25px);
-      -webkit-backdrop-filter: blur(25px);
-      border-radius: 24px;
-      border: 1px solid var(--glass-border);
-      display: flex;
-      flex-direction: column;
-      height: 60vh; /* Mobile height */
-      max-height: 800px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      overflow: hidden;
-    }
-
-    @media (min-width: 1024px) {
-      .chat-card {
-        height: calc(100vh - 150px);
-        min-height: 500px;
-        position: sticky;
-        top: 20px;
-      }
-    }
-
-    /* Chat Header (Optional Visual) + دکمه مینیمایز */
-    .chat-header {
-      padding: 15px;
-      background: rgba(255, 255, 255, 0.03);
-      border-bottom: 1px solid var(--glass-border);
-      text-align: center;
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      letter-spacing: 0.5px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .chat-header span {
-        flex-grow: 1;
-        text-align: center;
-    }
-    
-    .minimize-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        padding: 0;
-        margin-right: -5px; 
-        transition: color 0.2s;
-        order: 1; /* این را در ابتدا قرار می دهد (سمت راست) */
-    }
-    .minimize-btn:hover {
-        color: var(--primary);
-    }
-    .minimize-btn svg {
-        display: block;
-    }
-
-    #chatContainer {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      scroll-behavior: smooth;
-    }
-
-    /* Scrollbar Styling (بدون تغییر) */
-    #chatContainer::-webkit-scrollbar { width: 6px; }
-    #chatContainer::-webkit-scrollbar-track { background: transparent; }
-    #chatContainer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-    #chatContainer::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-
-    .chat-message {
-      padding: 12px 18px;
-      border-radius: 18px;
-      max-width: 85%;
-      font-size: 0.95rem;
-      line-height: 1.6;
-      position: relative;
-      animation: messagePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      word-wrap: break-word;
-    }
-
-    @keyframes messagePop {
-      0% { opacity: 0; transform: scale(0.8) translateY(10px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    .chat-message.self {
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      color: white;
-      align-self: flex-end;
-      border-bottom-left-radius: 4px;
-    }
-
-    .chat-message.other {
-      background: rgba(255, 255, 255, 0.08);
-      color: #e2e8f0;
-      align-self: flex-start;
-      border-bottom-right-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.05);
-    }
-
-    #chatInputContainer {
-      padding: 15px;
-      display: flex;
-      gap: 10px;
-      background: rgba(0, 0, 0, 0.2);
-      border-top: 1px solid var(--glass-border);
-    }
-
-    #chatInput {
-      flex: 1;
-      padding: 12px 18px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255, 255, 255, 0.05);
-      color: #fff;
-      font-family: var(--font-family);
-      outline: none;
-      transition: all 0.3s;
-    }
-
-    #chatInput:focus {
-      background: rgba(255, 255, 255, 0.1);
-      border-color: var(--primary);
-    }
-
-    #sendBtn {
-      padding: 0 20px;
-      border-radius: 12px;
-      border: none;
-      background: var(--accent);
-      color: #fff;
-      cursor: pointer;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #sendBtn:hover {
-      background: #22d3ee;
-      transform: rotate(-10deg) scale(1.1);
-    }
-    
-    /* --- دکمه باز کردن چت (Floating) در سمت چپ --- */
-    #openChatBtn {
-        position: fixed;
-        bottom: 20px;
-        left: 20px; 
-        right: auto;
-        width: 50px;
-        height: 50px;
-        padding: 0;
-        border-radius: 50%;
-        border: none;
-        background: var(--secondary);
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-        z-index: 1000;
-        box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
-        display: none; /* در ابتدا پنهان */
-        align-items: center;
-        justify-content: center;
-        transition: all 0.3s ease;
-    }
-    
-    #openChatBtn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 8px 25px rgba(236, 72, 153, 0.6);
-    }
-    
-    /* --- Animations (بدون تغییر) --- */
-    @keyframes fadeInDown {
-      from { opacity: 0; transform: translateY(-30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes zoomIn {
-      from { opacity: 0; transform: scale(0.9); }
-      to { opacity: 1; transform: scale(1); }
-    }
-
-    /* --- JS Toggle Helpers --- */
-    .vid { display: none; } /* Default state */
-    
-    /* Logic override classes */
-    .vid[style*="display: block"] {
-      display: block !important;
-      animation: zoomIn 0.5s ease;
-      width: 100%; /* Force width */
-    }
-  </style>
+/* Chat toggle button */
+#chatToggle{
+position:fixed;bottom:20px;left:20px;z-index:9999;padding:14px 24px;border:none;border-radius:14px;
+background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-weight:800;
+box-shadow:0 5px 18px rgba(0,0,0,.35);cursor:pointer;transition:.25s;
+}
+#chatToggle:hover{transform:scale(1.08)}
+</style>
 </head>
 <body>
-  
-  <div class="shape shape-1"></div>
-  <div class="shape shape-2"></div>
 
-  <div class="app-container">
-    <h2>تماشای همزمان — سینما آنلاین</h2>
+<button id="chatToggle">چت</button>
 
-    <div id="joinContainer">
-      <label for="roomId">اتاق گفتگو:</label>
-      <input id="roomId" value="room1" placeholder="شناسه اتاق...">
-      <button id="joinBtn">شروع تماشا</button>
-    </div>
+<div class="app-container">
+<h2>تماشای همزمان — سینما آنلاین</h2>
+<div id="joinContainer">
+<label>اتاق گفتگو:</label>
+<input id="roomId" value="room1">
+<button id="joinBtn">شروع تماشا</button>
+</div>
+<div class="content-wrapper">
+<div class="vid-container"><video id="video" controls class="vid"><source src="../sample.mp4"></video></div>
+<div class="chat">
+<div class="chat-card">
+<div class="chat-header">پیام‌ها</div>
+<div id="chatContainer"></div>
+<div id="chatInputContainer">
+<input id="chatInput" placeholder="پیام...">
+<button id="sendBtn">ارسال</button>
+</div></div></div></div></div>
 
-    <div class="content-wrapper" id="contentWrapper">
-      <div class="vid-container">
-        <video id="video" controls class="vid">
-          <source src="../sample.mp4" type="video/mp4">
-          مرورگر شما ویدیو را پشتیبانی نمی‌کند.
-        </video>
-      </div>
+<script>
+const socket=io();
+const video=document.getElementById('video');
+const joinBtn=document.getElementById('joinBtn');
+const roomIdInput=document.getElementById('roomId');
+const chatContainer=document.getElementById('chatContainer');
+const chatInput=document.getElementById('chatInput');
+const sendBtn=document.getElementById('sendBtn');
+const chatBox=document.querySelector('.chat');
+const chatToggle=document.getElementById('chatToggle');
+let joinedRoom=null,suppressLocalEvents=false;
+const userName="کاربر "+Math.floor(Math.random()*1000);
 
-      <div class="chat" id="chat">
-        <div class="chat-card">
-          <div class="chat-header">
-            <div style="width: 20px; height: 20px;"></div> 
-            <span>پیام‌ها</span>
-            <button class="minimize-btn" id="minimizeChatBtn" title="کوچک‌سازی">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
-            </button>
-          </div>
-          <div id="chatContainer">
-            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.85rem; margin-top: 20px;">
-              خوش آمدید! <br> اینجا می‌توانید با دوستانتان گفتگو کنید.
-            </div>
-          </div>
-          <div id="chatInputContainer">
-            <input id="chatInput" placeholder="پیام..." autocomplete="off" />
-            <button id="sendBtn">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <button id="openChatBtn" title="باز کردن گفتگو">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-  </button>
+joinBtn.onclick=()=>{
+document.querySelector('.vid').style.display='block';
+chatBox.style.display='block';
+const joinContainer=document.getElementById('joinContainer');
+joinContainer.style.display='none';
+const roomId=roomIdInput.value.trim();if(!roomId)return alert('یک room id وارد کن');
+joinedRoom=roomId;socket.emit('join-room',{roomId,userName});socket.emit('request-sync',{roomId});}
 
-  <script>
-    // --- EDITED LOGIC (DEBUGGED) ---
-    const socket = io();
-    const video = document.getElementById('video');
-    const joinBtn = document.getElementById('joinBtn');
-    const roomIdInput = document.getElementById('roomId');
-    const chatContainer = document.getElementById('chatContainer');
-    const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
-    const contentWrapper = document.getElementById('contentWrapper');
-    const chatElement = document.getElementById('chat');
-    const minimizeChatBtn = document.getElementById('minimizeChatBtn');
-    const openChatBtn = document.getElementById('openChatBtn');
+chatToggle.onclick=()=>{
+if(chatBox.style.display==='none'){chatBox.style.display='block'}else{chatBox.style.display='none'}
+}
 
-    let joinedRoom = null;
-    let suppressLocalEvents = false;
-    const userName = "کاربر " + Math.floor(Math.random()*1000);
+sendBtn.onclick=sendMessage;
+chatInput.addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage()});
+function sendMessage(){const msg=chatInput.value.trim();if(!msg||!joinedRoom)return;
+socket.emit('chat-message',{roomId:joinedRoom,userName,message:msg});chatInput.value='';addMessage(userName,msg,true)}
+socket.on('chat-message',({userName:sender,message})=>{addMessage(sender,message,sender===userName)});
+function addMessage(sender,message,self){const div=document.createElement('div');div.textContent=sender+': '+message;chatContainer.appendChild(div);chatContainer.scrollTop=chatContainer.scrollHeight}
 
-    // Join Room
-    joinBtn.onclick = () => {
-      const roomId = roomIdInput.value.trim();
-      if (!roomId) return alert("یک room id وارد کن");
-      joinedRoom = roomId;
-      
-      // ۱. نمایش ویدیو و چت پس از Join
-      document.querySelector(".vid").style.display="block";
-      
-      // حالت ماکسیمایز پیش فرض: نمایش چت و تنظیم layout
-      chatElement.classList.add('chat-active');
-      chatElement.classList.remove('chat-minimized-state');
-      contentWrapper.classList.remove('chat-minimized-layout');
-      openChatBtn.style.display = 'none';
-
-      // ۲. مخفی کردن دکمه Join
-      const joinContainer = document.getElementById('joinContainer');
-      joinContainer.style.opacity = '0';
-      joinContainer.style.transform = 'translateY(-20px)';
-      // تأخیر برای حذف از DOM تا انیمیشن تکمیل شود
-      setTimeout(() => { joinContainer.style.display = 'none'; }, 400); 
-
-      socket.emit("join-room", { roomId, userName });
-      socket.emit("request-sync", { roomId });
-    };
-    
-    // --- Min/Max Chat Logic ---
-    minimizeChatBtn.onclick = () => {
-        // ۱. پنهان کردن چت باکس
-        chatElement.classList.add('chat-minimized-state');
-        // ۲. باز شدن Layout ویدیو (تمام صفحه)
-        contentWrapper.classList.add('chat-minimized-layout');
-        // ۳. نمایش دکمه شناور باز کردن چت
-        openChatBtn.style.display = 'flex'; 
-    };
-    
-    openChatBtn.onclick = () => {
-        // ۱. نمایش چت باکس
-        chatElement.classList.remove('chat-minimized-state');
-        // ۲. بازگشت Layout به حالت دو ستونی
-        contentWrapper.classList.remove('chat-minimized-layout');
-        // ۳. مخفی کردن دکمه شناور
-        openChatBtn.style.display = 'none'; 
-    };
-
-
-    // Video Sync (بقیه منطق جاوااسکریپت بدون تغییر)
-    socket.on("sync-state", ({ time, playing }) => {
-      suppressLocalEvents = true;
-      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
-      if (playing) video.play().catch(()=>{}); else video.pause();
-      setTimeout(()=> suppressLocalEvents=false, 200);
-    });
-
-    ['play','pause'].forEach(evt=>{
-      video.addEventListener(evt, () => {
-        if (!joinedRoom || suppressLocalEvents) return;
-        socket.emit(evt, { roomId: joinedRoom, time: video.currentTime });
-      });
-    });
-
-    video.addEventListener('seeking', () => {
-      if (!joinedRoom || suppressLocalEvents) return;
-      socket.emit('seek', { roomId: joinedRoom, time: video.currentTime });
-    });
-
-    socket.on('play', ({ time }) => { suppressLocalEvents = true; if (Math.abs(video.currentTime - time)>0.5) video.currentTime=time; video.play().catch(()=>{}); setTimeout(()=>suppressLocalEvents=false,200); });
-    socket.on('pause', ({ time }) => { suppressLocalEvents = true; if (Math.abs(video.currentTime - time)>0.5) video.currentTime=time; video.pause(); setTimeout(()=>suppressLocalEvents=false,200); });
-    socket.on('seek', ({ time }) => { suppressLocalEvents=true; video.currentTime=time; setTimeout(()=>suppressLocalEvents=false,200); });
-
-    // Chat
-    sendBtn.onclick = sendMessage;
-    chatInput.addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
-
-    function sendMessage() {
-      const msg = chatInput.value.trim();
-      if (!msg || !joinedRoom) return;
-      socket.emit('chat-message', { roomId: joinedRoom, userName, message: msg });
-      chatInput.value = '';
-      addMessage(userName, msg, true);
-    }
-
-    socket.on('chat-message', ({ userName: sender, message }) => {
-      const isSelf = sender === userName;
-      addMessage(sender, message, isSelf);
-    });
-
-    function addMessage(sender, message, self=false) {
-      const div = document.createElement('div');
-      div.className = 'chat-message ' + (self ? 'self' : 'other');
-      div.textContent = sender + ': ' + message;
-      chatContainer.appendChild(div);
-      chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-
-    // Heartbeat
-    setInterval(() => {
-      if (!joinedRoom) return;
-      if (!video.paused) socket.emit('heartbeat', { roomId: joinedRoom, time: video.currentTime });
-    }, 5000);
-  </script>
-</body>
-</html>
+socket.on('sync-state',({time,playing})=>{suppressLocalEvents=true;if(Math.abs(video.currentTime-time)>0.5)video.currentTime=time;if(playing)video.play().catch(()=>{});else video.pause();setTimeout(()=>suppressLocalEvents=false,200)});
+['play','pause'].forEach(evt=>{video.addEventListener(evt,()=>{if(!joinedRoom||suppressLocalEvents)return;socket.emit(evt,{roomId:joinedRoom,time:video.currentTime})})});
+video.addEventListener('seeking',()=>{if(!joinedRoom||suppressLocalEvents)return;socket.emit('seek',{roomId:joinedRoom,time:video.currentTime})});
+socket.on('play',({time})=>{suppressLocalEvents=true;if(Math.abs(video.currentTime-time)>0.5)video.currentTime=time;video.play();setTimeout(()=>suppressLocalEvents=false,200)});
+socket.on('pause',({time})=>{suppressLocalEvents=true;if(Math.abs(video.currentTime-time)>0.5)video.currentTime=time;video.pause();setTimeout(()=>suppressLocalEvents=false,200)});
+socket.on('seek',({time})=>{suppressLocalEvents=true;video.currentTime=time;setTimeout(()=>suppressLocalEvents=false,200)});
+</script>
+</body></html>
