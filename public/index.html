@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>سینک واچ | تماشای گروهی</title>
   <script src="/socket.io/socket.io.js"></script>
-  <!-- فونت فارسی وزیرمتن -->
   <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/wf/vazirmatn-fd.css" rel="stylesheet" type="text/css" />
   
   <style>
@@ -175,18 +174,24 @@
     .content-wrapper {
       display: grid;
       grid-template-columns: 1fr;
-/*      width: 100%;*/
+/* width: 100%;*/
       gap: 1.5rem;
       opacity: 0; /* JS handles fade in */
       animation: fadeInUp 1s ease-out forwards;
       animation-delay: 0.2s;
+      width: 100%; /* مطمئن شویم که wrapper کل عرض را میگیرد */
     }
 
-    /* Desktop Layout */
+    /* Desktop Layout: تغییر اندازه ویدیو برای بزرگتر شدن */
     @media (min-width: 1024px) {
       .content-wrapper {
-        grid-template-columns: 1fr 380px;
+        /* تغییر: اختصاص فضای بیشتر به ویدیو (مثلا 2 قسمت به 1 قسمت چت، یا 2fr 350px) */
+        grid-template-columns: 2fr 350px; 
         align-items: start;
+      }
+      /* در حالت مینیمایز، ویدیو کل عرض را بگیرد */
+      .content-wrapper.chat-minimized {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -209,10 +214,20 @@
 
     /* --- Chat Section --- */
     .chat {
-      /* Hidden by default via JS logic styles, but we style container */
+      /* به طور پیش فرض در حالت ورود، چت باکس نمایش داده نشود - توسط JS در حالت join نمایش داده می شود */
       width: 100%;
       height: 100%;
-		display: none;
+      display: none; /* پنهان کردن اولیه */
+    }
+
+    /* نمایش چت در حالت ماکسیمایز */
+    .chat.chat-maximized {
+        display: block;
+    }
+
+    /* پنهان کردن چت در حالت مینیمایز */
+    .chat-minimized .chat {
+      display: none !important;
     }
 
     .chat-card {
@@ -238,7 +253,7 @@
       }
     }
 
-    /* Chat Header (Optional Visual) */
+    /* Chat Header (Optional Visual) + دکمه مینیمایز */
     .chat-header {
       padding: 15px;
       background: rgba(255, 255, 255, 0.03);
@@ -247,6 +262,30 @@
       font-size: 0.9rem;
       color: var(--text-muted);
       letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chat-header span {
+        flex-grow: 1;
+        text-align: center;
+    }
+    
+    .minimize-btn {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0;
+        margin-right: -5px; /* برای رایت‌تو‌لفت */
+        transition: color 0.2s;
+    }
+    .minimize-btn:hover {
+        color: var(--primary);
+    }
+    .minimize-btn svg {
+        display: block;
     }
 
     #chatContainer {
@@ -339,7 +378,33 @@
       background: #22d3ee;
       transform: rotate(-10deg) scale(1.1);
     }
-
+    
+    /* --- دکمه باز کردن چت (Floating) --- */
+    #openChatBtn {
+        position: fixed;
+        bottom: 20px;
+        /* سمت چپ صفحه (LTR: left) - برای RTL باید از راست باشد اما طبق درخواست شما به سمت چپ (LHS) منتقل شده */
+        /* برای RTL، "چپ" در واقع می‌شود 'right: auto' و 'left: 20px' */
+        left: 20px; 
+        right: auto;
+        padding: 15px;
+        border-radius: 50%;
+        border: none;
+        background: var(--secondary); /* یا primary */
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+        display: none; /* در ابتدا پنهان */
+        transition: all 0.3s ease;
+    }
+    
+    #openChatBtn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 25px rgba(236, 72, 153, 0.6);
+    }
+    
     /* --- Animations --- */
     @keyframes fadeInDown {
       from { opacity: 0; transform: translateY(-30px); }
@@ -366,8 +431,8 @@
       width: 100%; /* Force width */
     }
     
-    .chat[style*="display: block"] {
-      display: block !important;
+    /* کلاس chat.chat-maximized برای نمایش چت بعد از join استفاده می شود. */
+    .chat-maximized {
       animation: fadeInUp 0.6s ease 0.1s backwards;
     }
 
@@ -375,7 +440,6 @@
 </head>
 <body>
   
-  <!-- Background Shapes -->
   <div class="shape shape-1"></div>
   <div class="shape shape-2"></div>
 
@@ -388,8 +452,7 @@
       <button id="joinBtn">شروع تماشا</button>
     </div>
 
-    <!-- Wrapper to handle layout when items become visible -->
-    <div class="content-wrapper">
+    <div class="content-wrapper" id="contentWrapper">
       <div class="vid-container">
         <video id="video" controls class="vid">
           <source src="../sample.mp4" type="video/mp4">
@@ -397,9 +460,15 @@
         </video>
       </div>
 
-      <div class="chat">
+      <div class="chat" id="chat">
         <div class="chat-card">
-          <div class="chat-header">پیام‌ها</div>
+          <div class="chat-header">
+            <button class="minimize-btn" id="minimizeChatBtn" title="کوچک‌سازی">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+            </button>
+            <span>پیام‌ها</span>
+            <div style="width: 20px; height: 20px;"></div> 
+          </div>
           <div id="chatContainer">
             <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.85rem; margin-top: 20px;">
               خوش آمدید! <br> اینجا می‌توانید با دوستانتان گفتگو کنید.
@@ -408,7 +477,6 @@
           <div id="chatInputContainer">
             <input id="chatInput" placeholder="پیام..." autocomplete="off" />
             <button id="sendBtn">
-              <!-- Send Icon -->
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
           </div>
@@ -416,9 +484,13 @@
       </div>
     </div>
   </div>
+  
+  <button id="openChatBtn" title="باز کردن گفتگو">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+  </button>
 
   <script>
-    // --- EXACT ORIGINAL LOGIC (DO NOT TOUCH) ---
+    // --- EDITED LOGIC ---
     const socket = io();
     const video = document.getElementById('video');
     const joinBtn = document.getElementById('joinBtn');
@@ -426,33 +498,53 @@
     const chatContainer = document.getElementById('chatContainer');
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
+    const contentWrapper = document.getElementById('contentWrapper');
+    const chatElement = document.getElementById('chat');
+    const minimizeChatBtn = document.getElementById('minimizeChatBtn');
+    const openChatBtn = document.getElementById('openChatBtn');
 
 
     let joinedRoom = null;
     let suppressLocalEvents = false;
-    const userName = "کاربر " + Math.floor(Math.random()*1000); // Small tweak for Persian name prefix, logic remains same
+    const userName = "کاربر " + Math.floor(Math.random()*1000);
 
     // Join Room
     joinBtn.onclick = () => {
-		document.querySelector(".chat").style.display="block";
-      // Logic relies on simple style.display setting
-      document.querySelector(".vid").style.display="block";
-      document.querySelector(".chat").style.display="block";
+      const roomId = roomIdInput.value.trim();
+      if (!roomId) return alert("یک room id وارد کن");
+      joinedRoom = roomId;
       
-      // UI cleanup: Hide join bar smoothly
+      // ۱. نمایش ویدیو و چت پس از Join
+      document.querySelector(".vid").style.display="block";
+      chatElement.classList.add('chat-maximized'); // نمایش چت با کلاس ماکسیمایز
+      
+      // ۲. مخفی کردن دکمه Join
       const joinContainer = document.getElementById('joinContainer');
       joinContainer.style.opacity = '0';
       joinContainer.style.transform = 'translateY(-20px)';
       setTimeout(() => { joinContainer.style.display = 'none'; }, 400);
 
-      const roomId = roomIdInput.value.trim();
-      if (!roomId) return alert("یک room id وارد کن");
-      joinedRoom = roomId;
       socket.emit("join-room", { roomId, userName });
       socket.emit("request-sync", { roomId });
     };
+    
+    // --- Min/Max Chat Logic ---
+    minimizeChatBtn.onclick = () => {
+        // تغییرات UI برای مینیمایز
+        chatElement.classList.remove('chat-maximized');
+        contentWrapper.classList.add('chat-minimized');
+        openChatBtn.style.display = 'flex'; // نمایش دکمه شناور
+    };
+    
+    openChatBtn.onclick = () => {
+        // تغییرات UI برای ماکسیمایز
+        chatElement.classList.add('chat-maximized');
+        contentWrapper.classList.remove('chat-minimized');
+        openChatBtn.style.display = 'none'; // مخفی کردن دکمه شناور
+    };
 
-    // Video Sync
+
+    // Video Sync - (بقیه منطق جاوااسکریپت بدون تغییر و خطا)
     socket.on("sync-state", ({ time, playing }) => {
       suppressLocalEvents = true;
       if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
