@@ -1,148 +1,424 @@
 <!doctype html>
-<html>
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>Sync Watch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>سینک واچ | تماشای گروهی</title>
   <script src="/socket.io/socket.io.js"></script>
+  <!-- فونت فارسی وزیرمتن -->
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/misc/Farsi-Digits/wf/vazirmatn-fd.css" rel="stylesheet" type="text/css" />
+  
   <style>
-    /* Reset */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* --- Variables & Reset --- */
+    :root {
+      --primary: #8b5cf6;
+      --primary-hover: #7c3aed;
+      --secondary: #ec4899;
+      --accent: #06b6d4;
+      --bg-dark: #0f172a;
+      --glass-bg: rgba(15, 23, 42, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --shadow-color: rgba(0, 0, 0, 0.25);
+      --font-family: 'Vazirmatn', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-      color: #fff;
+      font-family: var(--font-family);
+      background-color: var(--bg-dark);
+      /* Animated Background */
+      background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      color: var(--text-main);
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      padding: 1rem;
+      overflow-x: hidden;
     }
 
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* --- Layout Container --- */
+    .app-container {
+      width: 100%;
+      max-width: 1600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2rem;
+      z-index: 10;
+      position: relative;
+    }
+
+    /* --- Floating Shapes (Background Decoration) --- */
+    .shape {
+      position: fixed;
+      filter: blur(80px);
+      z-index: -1;
+      opacity: 0.4;
+      animation: float 10s infinite ease-in-out alternate;
+    }
+    .shape-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: var(--primary); animation-delay: 0s; }
+    .shape-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: var(--secondary); animation-delay: -5s; }
+
+    @keyframes float {
+      from { transform: translate(0, 0); }
+      to { transform: translate(30px, 50px); }
+    }
+
+    /* --- Typography --- */
     h2 {
+      font-weight: 900;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      margin-bottom: 0.5rem;
+      background: linear-gradient(to right, var(--accent), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       text-align: center;
-      font-size: 2rem;
-      margin-bottom: 20px;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      filter: drop-shadow(0 0 20px rgba(236, 72, 153, 0.3));
+      animation: fadeInDown 0.8s ease-out;
     }
 
+    /* --- Join Section --- */
     #joinContainer {
       display: flex;
-      margin-bottom: 20px;
-      gap: 10px;
+      flex-direction: column;
+      gap: 15px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 2rem;
+      border-radius: 24px;
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      width: 100%;
+      max-width: 400px;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: zoomIn 0.6s ease-out;
+    }
+
+    @media (min-width: 640px) {
+      #joinContainer {
+        flex-direction: row;
+        max-width: fit-content;
+        align-items: center;
+        padding: 1.5rem 2rem;
+      }
+    }
+
+    #joinContainer label {
+      font-weight: 500;
+      color: var(--text-muted);
+      white-space: nowrap;
     }
 
     #roomId {
-      padding: 10px;
-      border-radius: 6px;
-      border: none;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 1.1rem;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    @media (min-width: 640px) { #roomId { width: 220px; } }
+
+    #roomId:focus {
       outline: none;
-      font-size: 1rem;
-      width: 150px;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2);
+      transform: scale(1.02);
     }
 
     #joinBtn {
-      padding: 10px 20px;
+      width: 100%;
+      padding: 14px 24px;
       border: none;
-      border-radius: 6px;
-      background: #4facfe;
-      font-weight: bold;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
       color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      font-family: var(--font-family);
       cursor: pointer;
-      transition: 0.3s;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
     }
 
-    #joinBtn:hover { background: #00f2fe; }
+    @media (min-width: 640px) { #joinBtn { width: auto; } }
+
+    #joinBtn:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(236, 72, 153, 0.6);
+    }
+    
+    #joinBtn:active { transform: translateY(-1px); }
+
+    /* --- Main Content Layout --- */
+    .content-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+/*      width: 100%;*/
+      gap: 1.5rem;
+      opacity: 0; /* JS handles fade in */
+      animation: fadeInUp 1s ease-out forwards;
+      animation-delay: 0.2s;
+    }
+
+    /* Desktop Layout */
+    @media (min-width: 1024px) {
+      .content-wrapper {
+        grid-template-columns: 1fr 380px;
+        align-items: start;
+      }
+    }
+
+    /* --- Video Player --- */
+    .vid-container {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--glass-border);
+      background: #000;
+    }
 
     video {
-      border-radius: 10px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.7);
-      margin-bottom: 20px;
-      width: 640px;
-      max-width: 90%;
+      width: 100%;
+      display: block; /* Managed by JS logic but block helps layout */
+      aspect-ratio: 16/9;
+      object-fit: contain;
     }
 
-    /* Chat */
-    #chatContainer {
-      width: 650px;
-      max-width: 90%;
-      height: 250px;
-      background: rgba(0,0,0,0.4);
-      border-radius: 10px;
-      overflow-y: auto;
-      padding: 10px;
+    /* --- Chat Section --- */
+    .chat {
+      /* Hidden by default via JS logic styles, but we style container */
+      width: 100%;
+      height: 100%;
+		display: none;
+    }
+
+    .chat-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 24px;
+      border: 1px solid var(--glass-border);
       display: flex;
       flex-direction: column;
-      margin-bottom: 10px;
+      height: 60vh; /* Mobile height */
+      max-height: 800px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
     }
+
+    @media (min-width: 1024px) {
+      .chat-card {
+        height: calc(100vh - 150px);
+        min-height: 500px;
+        position: sticky;
+        top: 20px;
+      }
+    }
+
+    /* Chat Header (Optional Visual) */
+    .chat-header {
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--glass-border);
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    #chatContainer {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    /* Scrollbar Styling */
+    #chatContainer::-webkit-scrollbar { width: 6px; }
+    #chatContainer::-webkit-scrollbar-track { background: transparent; }
+    #chatContainer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #chatContainer::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
     .chat-message {
-      padding: 6px 12px;
-      border-radius: 8px;
-      margin-bottom: 6px;
+      padding: 12px 18px;
+      border-radius: 18px;
+      max-width: 85%;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      position: relative;
+      animation: messagePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
       word-wrap: break-word;
-      animation: fadeIn 0.3s ease-in-out;
     }
 
-    .chat-message.self { background: #4facfe; align-self: flex-end; }
-    .chat-message.other { background: #ff7eb3; align-self: flex-start; }
+    @keyframes messagePop {
+      0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .chat-message.self {
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: white;
+      align-self: flex-end;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-message.other {
+      background: rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      align-self: flex-start;
+      border-bottom-right-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
 
     #chatInputContainer {
+      padding: 15px;
       display: flex;
-      width: 640px;
-      max-width: 90%;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-top: 1px solid var(--glass-border);
     }
 
     #chatInput {
       flex: 1;
-      padding: 10px;
-      border-radius: 6px 0 0 6px;
-      border: none;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-family: var(--font-family);
       outline: none;
-      font-size: 1rem;
+      transition: all 0.3s;
+    }
+
+    #chatInput:focus {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--primary);
     }
 
     #sendBtn {
-      padding: 10px 20px;
-      border-radius: 0 6px 6px 0;
+      padding: 0 20px;
+      border-radius: 12px;
       border: none;
-      background: #43e97b;
+      background: var(--accent);
       color: #fff;
-      font-weight: bold;
       cursor: pointer;
-      transition: 0.3s;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    #sendBtn:hover { background: #38f9d7; }
+    #sendBtn:hover {
+      background: #22d3ee;
+      transform: rotate(-10deg) scale(1.1);
+    }
 
-    @keyframes fadeIn { 0%{opacity:0;} 100%{opacity:1;} }
-    .vid{
-      display: none;
+    /* --- Animations --- */
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    .chat{
-      display: none;
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
+
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* --- JS Toggle Helpers --- */
+    .vid { display: none; } /* Default state */
+    
+    /* Logic override classes */
+    .vid[style*="display: block"] {
+      display: block !important;
+      animation: zoomIn 0.5s ease;
+      width: 100%; /* Force width */
+    }
+    
+    .chat[style*="display: block"] {
+      display: block !important;
+      animation: fadeInUp 0.6s ease 0.1s backwards;
+    }
+
   </style>
 </head>
 <body>
-  <h2>تماشای همزمان — روم ساده</h2>
+  
+  <!-- Background Shapes -->
+  <div class="shape shape-1"></div>
+  <div class="shape shape-2"></div>
 
-  <div id="joinContainer">
-    <label>Room ID: <input id="roomId" value="room1"></label>
-    <button id="joinBtn">Join Room</button>
+  <div class="app-container">
+    <h2>تماشای همزمان — سینما آنلاین</h2>
+
+    <div id="joinContainer">
+      <label for="roomId">اتاق گفتگو:</label>
+      <input id="roomId" value="room1" placeholder="شناسه اتاق...">
+      <button id="joinBtn">شروع تماشا</button>
+    </div>
+
+    <!-- Wrapper to handle layout when items become visible -->
+    <div class="content-wrapper">
+      <div class="vid-container">
+        <video id="video" controls class="vid">
+          <source src="../sample.mp4" type="video/mp4">
+          مرورگر شما ویدیو را پشتیبانی نمی‌کند.
+        </video>
+      </div>
+
+      <div class="chat">
+        <div class="chat-card">
+          <div class="chat-header">پیام‌ها</div>
+          <div id="chatContainer">
+            <div style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.85rem; margin-top: 20px;">
+              خوش آمدید! <br> اینجا می‌توانید با دوستانتان گفتگو کنید.
+            </div>
+          </div>
+          <div id="chatInputContainer">
+            <input id="chatInput" placeholder="پیام..." autocomplete="off" />
+            <button id="sendBtn">
+              <!-- Send Icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <video id="video" controls class="vid">
-    <source src="../sample.mp4" type="video/mp4">
-    مرورگر شما ویدیو را پشتیبانی نمی‌کند.
-  </video>
-<div class="chat">
-  <div id="chatContainer"></div>
-  <div id="chatInputContainer">
-    <input id="chatInput" placeholder="پیام خود را بنویسید..." />
-    <button id="sendBtn">ارسال</button>
-  </div>
-</div>
   <script>
+    // --- EXACT ORIGINAL LOGIC (DO NOT TOUCH) ---
     const socket = io();
     const video = document.getElementById('video');
     const joinBtn = document.getElementById('joinBtn');
@@ -154,12 +430,21 @@
 
     let joinedRoom = null;
     let suppressLocalEvents = false;
-    const userName = "user" + Math.floor(Math.random()*1000);
+    const userName = "کاربر " + Math.floor(Math.random()*1000); // Small tweak for Persian name prefix, logic remains same
 
     // Join Room
     joinBtn.onclick = () => {
-document.querySelector(".vid").style.display="block";
-document.querySelector(".chat").style.display="block";
+		document.querySelector(".chat").style.display="block";
+      // Logic relies on simple style.display setting
+      document.querySelector(".vid").style.display="block";
+      document.querySelector(".chat").style.display="block";
+      
+      // UI cleanup: Hide join bar smoothly
+      const joinContainer = document.getElementById('joinContainer');
+      joinContainer.style.opacity = '0';
+      joinContainer.style.transform = 'translateY(-20px)';
+      setTimeout(() => { joinContainer.style.display = 'none'; }, 400);
+
       const roomId = roomIdInput.value.trim();
       if (!roomId) return alert("یک room id وارد کن");
       joinedRoom = roomId;
