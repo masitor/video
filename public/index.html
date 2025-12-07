@@ -1,107 +1,225 @@
-<!-- public/index.html -->
 <!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>Sync Watch</title>
   <script src="/socket.io/socket.io.js"></script>
+  <style>
+    /* Reset */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    }
+
+    #joinContainer {
+      display: flex;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+
+    #roomId {
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+      width: 150px;
+    }
+
+    #joinBtn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: #4facfe;
+      font-weight: bold;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #joinBtn:hover { background: #00f2fe; }
+
+    video {
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.7);
+      margin-bottom: 20px;
+      width: 640px;
+      max-width: 90%;
+    }
+
+    /* Chat */
+    #chatContainer {
+      width: 650px;
+      max-width: 90%;
+      height: 250px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 10px;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+
+    .chat-message {
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .chat-message.self { background: #4facfe; align-self: flex-end; }
+    .chat-message.other { background: #ff7eb3; align-self: flex-start; }
+
+    #chatInputContainer {
+      display: flex;
+      width: 640px;
+      max-width: 90%;
+    }
+
+    #chatInput {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px 0 0 6px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+
+    #sendBtn {
+      padding: 10px 20px;
+      border-radius: 0 6px 6px 0;
+      border: none;
+      background: #43e97b;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    #sendBtn:hover { background: #38f9d7; }
+
+    @keyframes fadeIn { 0%{opacity:0;} 100%{opacity:1;} }
+    .vid{
+      display: none;
+    }
+    .chat{
+      display: none;
+    }
+  </style>
 </head>
 <body>
   <h2>تماشای همزمان — روم ساده</h2>
 
-  <label>Room ID: <input id="roomId" value="room1"></label>
-  <button id="joinBtn">Join Room</button>
-  <br><br>
+  <div id="joinContainer">
+    <label>Room ID: <input id="roomId" value="room1"></label>
+    <button id="joinBtn">Join Room</button>
+  </div>
 
-  <video id="video" width="640" controls>
-    <!-- برای تست از یک فایل mp4 محلی یا URL استفاده کن -->
+  <video id="video" controls class="vid">
     <source src="../sample.mp4" type="video/mp4">
     مرورگر شما ویدیو را پشتیبانی نمی‌کند.
   </video>
-
+<div class="chat">
+  <div id="chatContainer"></div>
+  <div id="chatInputContainer">
+    <input id="chatInput" placeholder="پیام خود را بنویسید..." />
+    <button id="sendBtn">ارسال</button>
+  </div>
+</div>
   <script>
     const socket = io();
     const video = document.getElementById('video');
     const joinBtn = document.getElementById('joinBtn');
     const roomIdInput = document.getElementById('roomId');
+    const chatContainer = document.getElementById('chatContainer');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+
 
     let joinedRoom = null;
-    let suppressLocalEvents = false; // برای جلوگیری از لوپ
+    let suppressLocalEvents = false;
+    const userName = "user" + Math.floor(Math.random()*1000);
 
-    // معمولاً وقتی کاربر join کند، وضعیت را می‌گیریم
+    // Join Room
     joinBtn.onclick = () => {
+document.querySelector(".vid").style.display="block";
+document.querySelector(".chat").style.display="block";
       const roomId = roomIdInput.value.trim();
       if (!roomId) return alert("یک room id وارد کن");
       joinedRoom = roomId;
-      socket.emit("join-room", { roomId, userName: "user" + Math.floor(Math.random()*1000) });
-      console.log("joined", roomId);
-      // وقتی join شد بهتره یک درخواست sync فوری بفرستی (اگر لازم)
+      socket.emit("join-room", { roomId, userName });
       socket.emit("request-sync", { roomId });
     };
 
-    // وقتی دریافت شد که باید sync بشیم
-    socket.on("sync-state", ({ time, playing, serverTime }) => {
-      console.log("sync-state", time, playing);
-      // تنظیم زمان محلی و وضعیت پخش
+    // Video Sync
+    socket.on("sync-state", ({ time, playing }) => {
       suppressLocalEvents = true;
-      // برای اختلاف شبکه: اگر خیلی فرق داره، set currentTime
-      if (Math.abs(video.currentTime - time) > 0.5) {
-        video.currentTime = time;
-      }
+      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
       if (playing) video.play().catch(()=>{}); else video.pause();
       setTimeout(()=> suppressLocalEvents=false, 200);
     });
 
-    socket.on("play", ({ time, serverTime }) => {
-      console.log("remote play", time);
-      suppressLocalEvents = true;
-      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
-      video.play().catch(()=>{});
-      setTimeout(()=> suppressLocalEvents=false, 200);
-    });
-
-    socket.on("pause", ({ time, serverTime }) => {
-      console.log("remote pause", time);
-      suppressLocalEvents = true;
-      if (Math.abs(video.currentTime - time) > 0.5) video.currentTime = time;
-      video.pause();
-      setTimeout(()=> suppressLocalEvents=false, 200);
-    });
-
-    socket.on("seek", ({ time }) => {
-      console.log("remote seek", time);
-      suppressLocalEvents = true;
-      video.currentTime = time;
-      setTimeout(()=> suppressLocalEvents=false, 200);
-    });
-
-    // ارسال اتفاقات محلی به سرور
-    video.addEventListener('play', () => {
-      if (!joinedRoom || suppressLocalEvents) return;
-      console.log("local play emit", video.currentTime);
-      socket.emit('play', { roomId: joinedRoom, time: video.currentTime });
-    });
-
-    video.addEventListener('pause', () => {
-      if (!joinedRoom || suppressLocalEvents) return;
-      console.log("local pause emit", video.currentTime);
-      socket.emit('pause', { roomId: joinedRoom, time: video.currentTime });
+    ['play','pause'].forEach(evt=>{
+      video.addEventListener(evt, () => {
+        if (!joinedRoom || suppressLocalEvents) return;
+        socket.emit(evt, { roomId: joinedRoom, time: video.currentTime });
+      });
     });
 
     video.addEventListener('seeking', () => {
       if (!joinedRoom || suppressLocalEvents) return;
-      // وقتی کاربر seek کرد، یک event می‌فرستیم
-      console.log("local seek emit", video.currentTime);
       socket.emit('seek', { roomId: joinedRoom, time: video.currentTime });
     });
 
-    // گزینه: هر چند ثانیه یکبار، وضعیت را به‌صورت نرمال به‌روزرسانی کن (برای رفع drift)
+    socket.on('play', ({ time }) => { suppressLocalEvents = true; if (Math.abs(video.currentTime - time)>0.5) video.currentTime=time; video.play().catch(()=>{}); setTimeout(()=>suppressLocalEvents=false,200); });
+    socket.on('pause', ({ time }) => { suppressLocalEvents = true; if (Math.abs(video.currentTime - time)>0.5) video.currentTime=time; video.pause(); setTimeout(()=>suppressLocalEvents=false,200); });
+    socket.on('seek', ({ time }) => { suppressLocalEvents=true; video.currentTime=time; setTimeout(()=>suppressLocalEvents=false,200); });
+
+    // Chat
+    sendBtn.onclick = sendMessage;
+    chatInput.addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
+
+    function sendMessage() {
+      const msg = chatInput.value.trim();
+      if (!msg || !joinedRoom) return;
+      socket.emit('chat-message', { roomId: joinedRoom, userName, message: msg });
+      chatInput.value = '';
+      addMessage(userName, msg, true);
+    }
+
+    socket.on('chat-message', ({ userName: sender, message }) => {
+      const isSelf = sender === userName;
+      addMessage(sender, message, isSelf);
+    });
+
+    function addMessage(sender, message, self=false) {
+      const div = document.createElement('div');
+      div.className = 'chat-message ' + (self ? 'self' : 'other');
+      div.textContent = sender + ': ' + message;
+      chatContainer.appendChild(div);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Heartbeat
     setInterval(() => {
       if (!joinedRoom) return;
-      // فقط وقتی در حال پخش است
-      if (!video.paused) {
-        socket.emit('heartbeat', { roomId: joinedRoom, time: video.currentTime });
-      }
+      if (!video.paused) socket.emit('heartbeat', { roomId: joinedRoom, time: video.currentTime });
     }, 5000);
   </script>
 </body>
