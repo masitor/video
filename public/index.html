@@ -47,6 +47,7 @@ body {
   100% { background-position: 0% 50%; }
 }
 
+/* --- Layout Container --- */
 .app-container {
   width: 100%;
   max-width: 1600px;
@@ -58,7 +59,7 @@ body {
   position: relative;
 }
 
-/* Floating Shapes */
+/* --- Floating Shapes --- */
 .shape {
   position: fixed;
   filter: blur(80px);
@@ -74,7 +75,7 @@ body {
   to { transform: translate(30px, 50px); }
 }
 
-/* Typography */
+/* --- Typography --- */
 h2 {
   font-weight: 900;
   font-size: clamp(1.8rem, 5vw, 3rem);
@@ -87,7 +88,7 @@ h2 {
   animation: fadeInDown 0.8s ease-out;
 }
 
-/* Join Section */
+/* --- Join Section --- */
 #joinContainer {
   display: flex;
   flex-direction: column;
@@ -169,7 +170,7 @@ h2 {
 
 #joinBtn:active { transform: translateY(-1px); }
 
-/* Main Content Layout */
+/* --- Main Content Layout --- */
 .content-wrapper {
   display: grid;
   grid-template-columns: 1fr;
@@ -187,11 +188,12 @@ h2 {
   }
 }
 
+/* حالت بدون چت */
 .content-wrapper.no-chat {
   grid-template-columns: 1fr !important;
 }
 
-/* Video Player */
+/* --- Video Player --- */
 .vid-container {
   position: relative;
   border-radius: 24px;
@@ -203,68 +205,87 @@ h2 {
   transition: all 0.3s ease;
 }
 
-/* حالت تمام صفحه برای ویدیو وقتی چت بسته است */
+/* حالت تمام صفحه وقتی چت بسته است */
 .content-wrapper.no-chat .vid-container {
   max-width: 100%;
   width: 100%;
 }
 
+/* ویدیو اصلی */
 video {
   width: 100%;
   display: block;
-  aspect-ratio: 16/9;
+  aspect-ratio: 16/9; 
   object-fit: contain;
 }
 
 /* --- Chat Section --- */
-.chat { display: none; width: 100%; height: 100%; }
-.chat-toggle-btn { position: absolute; left: 15px; top: 15px; z-index: 20; background: rgba(15,23,42,0.7); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 10px; color: white; padding: 8px 12px; cursor: pointer; font-family: var(--font-family); font-size: 0.9rem; transition: all 0.3s ease; display: flex; align-items: center; gap: 5px; }
-.chat-toggle-btn:hover { background: var(--primary); transform: translateY(-2px); }
-.chat-card { background: var(--glass-bg); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border-radius: 24px; border: 1px solid var(--glass-border); display: flex; flex-direction: column; height: 60vh; max-height: 800px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); overflow: hidden; position: relative; }
+.chat {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
 
-@media (min-width: 1024px) { .chat-card { height: calc(100vh - 150px); min-height: 500px; position: sticky; top: 20px; } }
+/* دکمه باز/بسته کردن چت */
+.chat-toggle-btn {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  z-index: 20;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  color: white;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
 
-/* Chat Header */
-.chat-header { padding: 15px; background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--glass-border); text-align: center; font-size: 0.9rem; color: var(--text-muted); letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
-.chat-close-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; padding: 5px 10px; border-radius: 5px; transition: all 0.3s ease; }
-.chat-close-btn:hover { color: var(--primary); background: rgba(255,255,255,0.1); }
-#chatContainer { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-#chatContainer::-webkit-scrollbar { width: 6px; }
-#chatContainer::-webkit-scrollbar-track { background: transparent; }
-#chatContainer::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-#chatContainer::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
-.chat-message { padding: 12px 18px; border-radius: 18px; max-width: 85%; font-size: 0.95rem; line-height: 1.6; position: relative; animation: messagePop 0.4s cubic-bezier(0.175,0.885,0.32,1.275); box-shadow: 0 2px 5px rgba(0,0,0,0.05); word-wrap: break-word; }
-.chat-message.self { background: linear-gradient(135deg,var(--primary),var(--primary-hover)); color: white; align-self: flex-end; border-bottom-left-radius: 4px; }
-.chat-message.other { background: rgba(255,255,255,0.08); color: #e2e8f0; align-self: flex-start; border-bottom-right-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
-#chatInputContainer { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.2); border-top: 1px solid var(--glass-border); }
-#chatInput { flex: 1; padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #fff; font-family: var(--font-family); outline: none; transition: all 0.3s; }
-#chatInput:focus { background: rgba(255,255,255,0.1); border-color: var(--primary); }
-#sendBtn { padding: 0 20px; border-radius: 12px; border: none; background: var(--accent); color: #fff; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; }
-#sendBtn:hover { background: #22d3ee; transform: rotate(-10deg) scale(1.1); }
+.chat-toggle-btn:hover {
+  background: var(--primary);
+  transform: translateY(-2px);
+}
 
-/* Animations */
+/* --- Mobile Video Fix --- */
+@media (max-width: 640px) {
+  .vid-container {
+    width: 100vw;  /* عرض کامل صفحه */
+    max-width: 100vw;
+    height: auto;
+  }
+  video {
+    width: 100%;
+    height: auto;
+    aspect-ratio: auto;
+    object-fit: contain;
+  }
+}
+
+/* --- Animations --- */
 @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes zoomIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-@keyframes messagePop { 0% { opacity: 0; transform: scale(0.8) translateY(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
 
-/* JS Toggle Helpers */
+/* --- JS Toggle Helpers --- */
 .vid { display: none; }
-.vid[style*="display: block"] { display: block !important; animation: zoomIn 0.5s ease; width: 100%; }
-.chat[style*="display: block"] { display: block !important; animation: fadeInUp 0.6s ease 0.1s backwards; }
+.vid[style*="display: block"] {
+  display: block !important;
+  animation: zoomIn 0.5s ease;
+  width: 100%;
+}
 
-/* --- Mobile-specific Video Size --- */
-@media (max-width: 640px) {
-  .vid-container {
-    width: 110%;
-    max-width: none;
-  }
-  video {
-    aspect-ratio: 4/3;
-    object-fit: cover;
-  }
+.chat[style*="display: block"] {
+  display: block !important;
+  animation: fadeInUp 0.6s ease 0.1s backwards;
 }
 </style>
+
 </head>
 <body>
   
@@ -451,5 +472,6 @@ video {
   </script>
 </body>
 </html>
+
 
 
