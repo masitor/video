@@ -177,24 +177,37 @@
     .content-wrapper {
       display: grid;
       grid-template-columns: 1fr;
-/*      width: 100%;*/
+      width: 100%;
       gap: 1.5rem;
       opacity: 0;
       animation: fadeInUp 1s ease-out forwards;
       animation-delay: 0.2s;
+      /* اضافه شده: ارتفاع بیشتر */
+      min-height: 70vh;
     }
 
     /* Desktop Layout */
     @media (min-width: 1024px) {
       .content-wrapper {
-        grid-template-columns: 1fr 380px;
+        grid-template-columns: minmax(0, 1fr) 380px; /* تغییر: فضای بیشتر برای ویدیو */
         align-items: start;
+        /* اضافه شده: ارتفاع بیشتر برای دسکتاپ */
+        height: calc(100vh - 180px);
+        min-height: 600px;
+        max-height: 800px;
       }
     }
 
     /* کلاس جدید برای حالت بدون چت */
     .content-wrapper.no-chat {
       grid-template-columns: 1fr !important;
+    }
+
+    /* در دسکتاپ وقتی چت بسته است */
+    @media (min-width: 1024px) {
+      .content-wrapper.no-chat {
+        grid-template-columns: 1fr !important;
+      }
     }
 
     /* --- Video Player --- */
@@ -207,6 +220,8 @@
       background: #000;
       width: 100%;
       transition: all 0.3s ease;
+      /* اضافه شده: ارتفاع برای ویدیو */
+      height: 100%;
     }
 
     /* حالت تمام صفحه برای ویدیو وقتی چت بسته است */
@@ -214,6 +229,23 @@
       max-width: 100% !important;
       width: 100% !important;
       height: calc(100vh - 180px) !important;
+    }
+
+    /* در دسکتاپ ویدیو باید ارتفاع کامل داشته باشد */
+    @media (min-width: 1024px) {
+      .vid-container {
+        height: 100% !important;
+      }
+      
+      /* وقتی چت باز است در دسکتاپ */
+      .content-wrapper:not(.no-chat) .vid-container {
+        height: 100% !important;
+      }
+      
+      /* در دسکتاپ وقتی چت بسته است */
+      .content-wrapper.no-chat .vid-container {
+        height: calc(100vh - 180px) !important;
+      }
     }
 
     /* در موبایل وقتی چت بسته است */
@@ -235,6 +267,8 @@
       -webkit-user-select: none !important;
       user-select: none !important;
       -webkit-user-drag: none;
+      /* اضافه شده: ارتفاع کامل */
+      height: 100%;
     }
 
     /* حالت تمام صفحه برای ویدیو در موبایل وقتی چت بسته است */
@@ -258,11 +292,27 @@
       }
     }
 
+    /* در دسکتاپ ویدیو باید فضای بیشتری بگیرد */
+    @media (min-width: 1024px) {
+      video {
+        height: 100%;
+        object-fit: contain;
+      }
+    }
+
     /* --- Chat Section --- */
     .chat {
       display: none;
       width: 100%;
       height: 100%;
+    }
+
+    /* در دسکتاپ وقتی چت نمایش داده می‌شود */
+    @media (min-width: 1024px) {
+      .chat[style*="display: block"] {
+        display: block !important;
+        height: 100%;
+      }
     }
 
     /* دکمه باز/بسته کردن چت */
@@ -315,8 +365,8 @@
 
     @media (min-width: 1024px) {
       .chat-card {
-        height: calc(100vh - 150px);
-        min-height: 500px;
+        height: 100% !important;
+        min-height: auto;
         position: sticky;
         top: 20px;
       }
@@ -552,7 +602,6 @@
     const chatToggleBtn = document.getElementById('chatToggleBtn');
     const closeChatBtn = document.getElementById('closeChatBtn');
     const contentWrapper = document.querySelector('.content-wrapper');
-    const vidContainer = document.querySelector('.vid-container');
 
     let joinedRoom = null;
     let suppressLocalEvents = false;
